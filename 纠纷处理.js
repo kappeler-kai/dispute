@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         AliExpress 纠纷自动统计和处理 V4.9
+// @name         AliExpress 纠纷自动统计和处理 V4.8
 // @namespace    http://tampermonkey.net/
-// @version      4.9
-// @description  增量同步 + 批量标记 + 已处理/未处理筛选 + 聊天弹窗
+// @version      4.8
+// @description  增量同步 + 批量标记 + 已处理/未处理筛选
 // @author       Claude
 // @match        https://csp.aliexpress.com/m_apps/dispute-management/list*
 // @grant        GM_addStyle
@@ -17,7 +17,7 @@
 (function() {
     'use strict';
 
-    console.log('V4.9 脚本开始加载...');
+    console.log('V4.8 脚本开始加载...');
 
     // ==================== 样式 ====================
     GM_addStyle(`
@@ -53,6 +53,7 @@
         }
         .dispute-panel-overlay.show { display: block; }
 
+        /* 全屏面板 */
         .dispute-panel {
             position: fixed;
             top: 0;
@@ -124,6 +125,7 @@
         }
         .panel-close:hover { background: rgba(255,255,255,0.3); }
 
+        /* 状态信息栏 */
         .status-bar {
             display: flex;
             align-items: center;
@@ -138,6 +140,7 @@
         .status-bar .status-item { display: flex; align-items: center; gap: 5px; }
         .status-bar .status-divider { width: 1px; height: 16px; background: #ddd; }
 
+        /* 处理情况下拉选择器 */
         .process-select {
             padding: 4px 8px;
             border-radius: 4px;
@@ -179,12 +182,14 @@
             font-size: 20px;
         }
 
+        /* 批量选择复选框 */
         .batch-checkbox {
             width: 18px;
             height: 18px;
             cursor: pointer;
         }
 
+        /* 批量操作栏 */
         .batch-actions-bar {
             display: none;
             padding: 10px 30px;
@@ -221,6 +226,7 @@
         }
         .batch-action-btn.cancel:hover { background: #f8f9fa; }
 
+        /* 同步弹窗 */
         .sync-modal {
             position: fixed;
             top: 0;
@@ -313,6 +319,7 @@
         }
         .sync-modal-btn.confirm:hover { background: #5a6fd6; }
 
+        /* 筛选卡片样式调整 */
         .filter-container {
             display: flex;
             gap: 12px;
@@ -349,6 +356,7 @@
             margin: 0 5px;
         }
 
+        /* 筛选条数选择器 */
         .limit-select-wrapper {
             display: flex;
             align-items: center;
@@ -368,6 +376,7 @@
             cursor: pointer;
         }
 
+        /* 显示设置 */
         .display-settings {
             margin-left: auto;
             display: flex;
@@ -484,6 +493,7 @@
         }
         .thumb-img:hover { transform: scale(1.1); }
 
+        /* 证据图片/视频折叠样式 */
         .evidence-container { position: relative; display: inline-block; }
         .evidence-stack { position: relative; width: 45px; height: 45px; cursor: pointer; }
         .evidence-stack-item {
@@ -519,6 +529,7 @@
         }
         .evidence-single:hover { transform: scale(1.1); border-color: #667eea; }
 
+        /* 视频标识 */
         .video-indicator {
             position: relative;
             display: inline-block;
@@ -571,11 +582,13 @@
         .lazy-load-btn.loading { background: #ffc107; color: #333; }
         .not-loaded { color: #999; font-size: 12px; font-style: italic; }
 
+        /* 协商方案简化样式 */
         .solution-simple { font-size: 12px; line-height: 1.5; }
         .solution-owner { color: #667eea; font-weight: 500; }
         .solution-type { color: #333; }
         .solution-amount { color: #dc3545; font-weight: bold; }
 
+        /* 买家备注样式 */
         .buyer-comment {
             font-size: 12px;
             color: #333;
@@ -599,6 +612,7 @@
         .buyer-comment-full { display: none; }
         .buyer-comment-full.show { display: block; }
 
+        /* 纠纷历史样式 - 完整版 */
         .history-container { font-size: 12px; max-width: 300px; }
         .history-item-full {
             padding: 8px;
@@ -651,6 +665,7 @@
         .history-more { display: none; margin-top: 6px; }
         .history-more.show { display: block; }
 
+        /* 物流信息样式 */
         .logistics-info { font-size: 11px; }
         .logistics-toggle {
             color: #667eea;
@@ -684,6 +699,7 @@
         .logistics-time { color: #666; white-space: nowrap; min-width: 95px; }
         .logistics-desc { color: #333; }
 
+        /* 图片/视频预览模态框 */
         .media-preview-modal {
             position: fixed;
             top: 0;
@@ -769,110 +785,23 @@
             vertical-align: middle;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* 聊天弹窗样式 */
-        .chat-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 25000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-        }
-        .chat-modal.show { display: flex; }
-        .chat-modal-content {
-            position: relative;
-            width: 92%;
-            height: 92%;
-            max-width: 1400px;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            display: flex;
-            flex-direction: column;
-        }
-        .chat-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            background: linear-gradient(135deg, #17a2b8, #138496);
-            color: white;
-            flex-shrink: 0;
-        }
-        .chat-modal-header h3 { margin: 0; font-size: 15px; font-weight: 500; }
-        .chat-modal-header-info { font-size: 12px; opacity: 0.9; margin-left: 15px; }
-        .chat-modal-close {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        .chat-modal-close:hover { background: rgba(255,255,255,0.3); }
-        .chat-modal-body { flex: 1; position: relative; overflow: hidden; }
-        .chat-modal-body iframe { width: 100%; height: 100%; border: none; }
-        .chat-modal-loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #666;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .chat-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            color: #1677ff;
-            background: transparent;
-            border: none;
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s;
-            white-space: nowrap;
-            cursor: pointer;
-        }
-        .chat-btn:hover {
-            background: rgba(22, 119, 255, 0.08);
-            color: #4096ff;
-        }
-        .chat-icon {
-            width: 14px;
-            height: 14px;
-            fill: currentColor;
-        }
     `);
 
     // ==================== 全局变量 ====================
     let allDisputeData = [];
-    let currentFilter = 'all';
+    let currentFilter = 'all'; // 'all', 'disputing', 'waiting-handle', 'processed', 'unprocessed'
     let channelId = '';
     let currentPage = 1;
     let pageSize = 20;
     let totalCount = 0;
-    let totalAll = 0;
+    let totalAll = 0; // 全部纠纷总数（固定值）
     let isLoading = false;
     let isFirstOpen = true;
 
+    // 统计数据
     let statsData = { disputing: 0, waitingHandle: 0 };
 
+    // 显示设置
     let displaySettings = {
         disputeReason: true,
         solution: true,
@@ -883,22 +812,26 @@
     };
     const DISPLAY_SETTINGS_KEY = 'disputeDisplaySettings_v1';
 
+    // 已处理标记
     const PROCESSED_CACHE_KEY = 'disputeProcessedCache_v1';
-    let processedCache = {};
+    let processedCache = {}; // { "订单号_纠纷时间": true }
 
+    // 纠纷列表缓存（增量同步用）
     const LIST_CACHE_KEY = 'disputeListCache_v1';
     let listCache = {
-        list: [],
-        firstItem: null,
-        lastItem: null,
-        syncTime: null
+        list: [],           // 所有页数据 [{orderId, disputeTime, ...}]
+        firstItem: null,    // 最新的一条 {orderId, disputeTime}
+        lastItem: null,     // 最旧的一条 {orderId, disputeTime}（用于扩展历史）
+        syncTime: null      // 上次同步时间
     };
 
-    let filteredList = [];
+    // 筛选相关
+    let filteredList = []; // 筛选结果（内存临时存储）
     let isScanning = false;
     let scanAborted = false;
 
-    let selectedItems = new Set();
+    // 批量选择
+    let selectedItems = new Set(); // 存储选中的 "订单号_纠纷时间"
 
     let currentPreviewMedia = [];
     let currentPreviewIndex = 0;
@@ -1020,6 +953,7 @@
         }
     }
 
+    // 生成唯一标识key（使用reverseOrderLineId）
     function getProcessedKey(reverseOrderLineId) {
         return reverseOrderLineId;
     }
@@ -1054,7 +988,7 @@
         return Object.keys(processedCache).length;
     }
 
-    // ==================== 列表缓存管理 ====================
+    // ==================== 列表缓存管理（增量同步用）====================
     function loadListCache() {
         try {
             const stored = GM_getValue(LIST_CACHE_KEY, null);
@@ -1093,12 +1027,15 @@
 
     function selectAllVisible() {
         const dataToRender = getDataToRender();
+
+        // 对于已处理/未处理模式，只选中当前页的数据
         let dataToSelect = dataToRender;
         if (currentFilter === 'processed' || currentFilter === 'unprocessed') {
             const startIdx = (currentPage - 1) * pageSize;
             const endIdx = startIdx + pageSize;
             dataToSelect = dataToRender.slice(startIdx, endIdx);
         }
+
         dataToSelect.forEach(item => {
             const key = getProcessedKey(item.reverseOrderLineId);
             selectedItems.add(key);
@@ -1211,6 +1148,7 @@
                         if (result.ret && result.ret.some(r => r.includes('SUCCESS'))) {
                             resolve(result.data);
                         } else {
+                            // 检查是否为令牌过期
                             const errMsg = result.ret ? result.ret[0] : 'Unknown error';
                             if (errMsg.includes('TOKEN_EXOIRED') || errMsg.includes('TOKEN_EXPIRED') || errMsg.includes('令牌过期')) {
                                 reject(new Error('登录已过期，请刷新页面后重试'));
@@ -1240,11 +1178,11 @@
     async function fetchDisputeStats() {
         try {
             const [allData, disputingData, waitingData] = await Promise.all([
-                fetchDisputeList(1, 1, null, null),
+                fetchDisputeList(1, 1, null, null),  // 获取全部数量
                 fetchDisputeList(1, 1, '11', null),
                 fetchDisputeList(1, 1, '10', 'timeout_trigger')
             ]);
-            totalAll = allData?.data?.pageInfo?.total || 0;
+            totalAll = allData?.data?.pageInfo?.total || 0;  // 保存全部数量
             statsData.disputing = disputingData?.data?.pageInfo?.total || 0;
             statsData.waitingHandle = waitingData?.data?.pageInfo?.total || 0;
             updateStatsDisplay();
@@ -1319,7 +1257,6 @@
             disputeStatus: line.reverseStatus,
             buyerName: line.buyer?.fullName || '-',
             buyerCountry: line.buyer?.country || '-',
-            contactBuyerUrl: line.buyer?.contactBuyerUrl || '',
             reverseOrderLineId: line.reverseOrderLineId,
             detailLoaded: false,
             cacheTimestamp: null,
@@ -1344,18 +1281,26 @@
         return item;
     }
 
+    // 根据显示设置决定需要调用哪些接口
     function getRequiredApis() {
         const apis = { needB: false, needC: false, needD: false };
+
+        // B接口：纠纷理由、协商方案、买家备注、证据
         if (displaySettings.disputeReason || displaySettings.solution ||
             displaySettings.buyerComment || displaySettings.evidence) {
             apis.needB = true;
         }
+
+        // C接口：物流信息
         if (displaySettings.logistics) {
             apis.needC = true;
         }
+
+        // D接口：纠纷历史
         if (displaySettings.history) {
             apis.needD = true;
         }
+
         return apis;
     }
 
@@ -1364,6 +1309,7 @@
             const apis = getRequiredApis();
             const promises = [];
 
+            // 根据需要调用不同的接口
             if (apis.needB) {
                 promises.push(fetchDisputeDetail(item.reverseOrderLineId));
             } else {
@@ -1385,11 +1331,14 @@
             const [detailResult, historyResult, orderResult] = await Promise.all(promises);
             const cacheData = {};
 
+            // 处理B接口数据
             if (detailResult) {
                 const detailData = detailResult.data || detailResult;
+
                 cacheData.disputeStatus = detailData.reverseDetailStatusText || item.disputeStatus;
                 cacheData.disputeReason = detailData.applyReason || '-';
 
+                // 协商方案和买家备注
                 if (detailData.solutions && detailData.solutions.length > 0) {
                     const s = detailData.solutions[0];
                     cacheData.solution = {
@@ -1400,6 +1349,7 @@
                     cacheData.buyerComment = s.content || '';
                 }
 
+                // 证据列表
                 const evidenceList = [];
                 if (detailData.evidence?.buyerEvidence) {
                     detailData.evidence.buyerEvidence.forEach(e => {
@@ -1413,6 +1363,7 @@
                 cacheData.evidenceList = evidenceList;
             }
 
+            // 处理D接口数据
             if (historyResult) {
                 const historyData = historyResult.data || historyResult || [];
                 cacheData.historyList = Array.isArray(historyData) ? historyData.map(h => {
@@ -1441,6 +1392,7 @@
                 }) : [];
             }
 
+            // 处理C接口数据
             if (orderResult) {
                 const logistics = extractLogisticsInfo(orderResult);
                 cacheData.logisticsMethod = logistics.logisticsMethod;
@@ -1465,6 +1417,7 @@
         document.getElementById('disputePanel')?.classList.remove('show');
     }
 
+    // 媒体预览（图片+视频）
     function previewMedia(mediaList, startIndex = 0) {
         currentPreviewMedia = mediaList;
         currentPreviewIndex = startIndex;
@@ -1509,82 +1462,6 @@
         if (container) container.innerHTML = '';
     }
 
-    // ==================== 聊天弹窗 ====================
-    function createChatModal() {
-        const chatModal = document.createElement('div');
-        chatModal.className = 'chat-modal';
-        chatModal.id = 'chatModal';
-        chatModal.innerHTML = `
-            <div class="chat-modal-content">
-                <div class="chat-modal-header">
-                    <div style="display:flex;align-items:center;">
-                        <h3>💬 联系买家</h3>
-                        <span class="chat-modal-header-info" id="chatModalInfo"></span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <span style="font-size:12px;opacity:0.8;">按 ESC 关闭</span>
-                        <button class="chat-modal-close" id="chatModalClose">×</button>
-                    </div>
-                </div>
-                <div class="chat-modal-body">
-                    <div class="chat-modal-loading" id="chatLoading">
-                        <span class="loading-spinner-inline"></span>
-                        <span>正在加载聊天页面...</span>
-                    </div>
-                    <iframe id="chatIframe" style="opacity:0;transition:opacity 0.3s;"></iframe>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(chatModal);
-
-        document.getElementById('chatModalClose').addEventListener('click', closeChatModal);
-        chatModal.addEventListener('click', (e) => {
-            if (e.target === chatModal) closeChatModal();
-        });
-
-        document.getElementById('chatIframe').addEventListener('load', function() {
-            const loading = document.getElementById('chatLoading');
-            const iframe = document.getElementById('chatIframe');
-            if (iframe.src && iframe.src !== 'about:blank') {
-                loading.style.display = 'none';
-                iframe.style.opacity = '1';
-            }
-        });
-    }
-
-    function openChatModal(contactBuyerUrl, buyerName, buyerCountry, orderId) {
-        const modal = document.getElementById('chatModal');
-        const iframe = document.getElementById('chatIframe');
-        const loading = document.getElementById('chatLoading');
-        const info = document.getElementById('chatModalInfo');
-
-        loading.style.display = 'flex';
-        iframe.style.opacity = '0';
-
-        info.textContent = `${buyerName} (${buyerCountry}) | 订单: ${orderId}`;
-
-        const fullUrl = contactBuyerUrl.startsWith('http')
-            ? contactBuyerUrl
-            : `https://csp.aliexpress.com${contactBuyerUrl}&channelId=${channelId}`;
-
-        iframe.src = fullUrl;
-        modal.classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeChatModal() {
-        const modal = document.getElementById('chatModal');
-        const iframe = document.getElementById('chatIframe');
-
-        modal.classList.remove('show');
-        document.body.style.overflow = '';
-
-        setTimeout(() => {
-            iframe.src = 'about:blank';
-            iframe.style.opacity = '0';
-        }, 300);
-    }
-
     function toggleLogistics(id) {
         const detail = document.getElementById('logistics-' + id);
         const toggle = document.getElementById('toggle-' + id);
@@ -1620,18 +1497,22 @@
         const allEl = document.getElementById('statAll');
         if (disputingEl) disputingEl.textContent = statsData.disputing;
         if (waitingEl) waitingEl.textContent = statsData.waitingHandle;
-        if (allEl) allEl.textContent = totalAll || '-';
+        if (allEl) allEl.textContent = totalAll || '-';  // 使用固定的totalAll
     }
 
     function updateTodayDisputeCount() {
+        // 获取今天的日期字符串 (YYYY-MM-DD)
         const today = new Date();
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        // 统计今日纠纷数
         let todayCount = 0;
         allDisputeData.forEach(item => {
             if (item.disputeTime && item.disputeTime.startsWith(todayStr)) {
                 todayCount++;
             }
         });
+
         const todayEl = document.getElementById('todayDisputeCount');
         if (todayEl) todayEl.textContent = todayCount;
     }
@@ -1697,15 +1578,18 @@
         loadAllBtn.textContent = hasLoaded ? '🔄 更新本页纠纷详情' : '⚡ 加载本页纠纷详情';
     }
 
+    // 同步弹窗
     let syncLimit = 500;
     let syncAll = false;
 
     function showSyncModal() {
+        // 如果有中断的同步，直接继续，不显示弹窗
         if (syncState.interrupted && syncState.newItems.length > 0) {
             console.log('检测到中断状态，继续同步', syncState);
             syncDisputeList();
             return;
         }
+
         document.getElementById('syncModalCacheCount').textContent = listCache.list.length;
         document.getElementById('syncModal').classList.add('show');
     }
@@ -1717,46 +1601,65 @@
     function confirmSync() {
         const allRadio = document.getElementById('syncAllRadio');
         const limitInput = document.getElementById('syncLimitInput');
+
+        // 直接使用checked值，避免中间变量问题
         const isAllMode = allRadio?.checked === true;
         const limitValue = parseInt(limitInput?.value) || 500;
 
+        console.log('confirmSync检查:', {
+            allRadioChecked: allRadio?.checked,
+            isAllMode,
+            limitValue
+        });
+
+        // 重置断点状态，开始新同步
+        // targetLimit: 0 表示无限制
         syncState = {
             page: 1,
             newItems: [],
             interrupted: false,
             targetLimit: isAllMode ? 0 : limitValue,
-            syncMode: null
+            syncMode: null  // 由syncDisputeList根据实际情况设置
         };
 
-        clearSyncState();
+        console.log('syncState设置完成:', JSON.stringify(syncState));
+
+        clearSyncState(); // 清除旧的中断状态
         hideSyncModal();
         syncDisputeList();
     }
 
+    // 同步状态（支持断点续传）
     const SYNC_STATE_KEY = 'disputeSyncState_v1';
     let syncState = {
         page: 1,
         newItems: [],
         interrupted: false,
-        targetLimit: 500,
-        syncMode: null
+        targetLimit: 500,  // 0 = 无限制
+        syncMode: null     // 'full' | 'increment' | 'expand' - 记录同步模式
     };
 
+    // 保存同步状态到本地存储
     function saveSyncState() {
         try {
-            GM_setValue(SYNC_STATE_KEY, JSON.stringify(syncState));
+            const toSave = JSON.stringify(syncState);
+            console.log('保存同步状态', toSave);
+            GM_setValue(SYNC_STATE_KEY, toSave);
         } catch (e) {
             console.error('保存同步状态失败:', e);
         }
     }
 
+    // 加载同步状态
     function loadSyncState() {
         try {
             const saved = GM_getValue(SYNC_STATE_KEY, null);
+            console.log('读取同步状态', saved);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (parsed && parsed.interrupted && parsed.newItems && parsed.newItems.length > 0) {
                     syncState = parsed;
+                    console.log('恢复中断状态', syncState);
                     return true;
                 }
             }
@@ -1766,19 +1669,23 @@
         return false;
     }
 
+    // 清除同步状态（只清除存储，不重置内存变量）
     function clearSyncState() {
         try {
             GM_deleteValue(SYNC_STATE_KEY);
+            console.log('清除同步状态存储');
         } catch (e) {
             console.error('清除同步状态失败:', e);
         }
     }
 
+    // 重置同步状态（清除存储并重置内存变量）
     function resetSyncState() {
         clearSyncState();
         syncState = { page: 1, newItems: [], interrupted: false, targetLimit: 500, syncMode: null };
     }
 
+    // 增量同步纠纷列表（支持断点续传）
     async function syncDisputeList() {
         if (isLoading) return;
         isLoading = true;
@@ -1791,7 +1698,10 @@
         const progressContainer = document.getElementById('progressContainer');
         progressContainer.classList.add('show');
 
+        // 是否继续同步（断点续传）
         const isResuming = syncState.interrupted && syncState.newItems.length > 0;
+
+        // 继续同步时重置中断标记（但保留其他数据）
         if (isResuming) {
             syncState.interrupted = false;
         }
@@ -1800,38 +1710,67 @@
             const perPage = 20;
             let hasMore = true;
             let foundExisting = false;
+            // 0 表示无限制（同步全部）
             const isUnlimited = syncState.targetLimit === 0;
             const maxItems = isUnlimited ? Infinity : syncState.targetLimit;
             const currentCacheCount = listCache.list.length;
 
+            // 判断同步模式（如果是断点续传，使用保存的模式）
             let isFullMode, isExpandMode, isIncrementMode;
 
             if (isResuming && syncState.syncMode) {
+                // 断点续传：使用保存的模式
                 isFullMode = syncState.syncMode === 'full';
                 isExpandMode = syncState.syncMode === 'expand';
                 isIncrementMode = syncState.syncMode === 'increment';
+                console.log('断点续传，恢复模式:', syncState.syncMode);
             } else {
+                // 新同步：根据条件判断模式
+                // 1. 全量模式：缓存为空时，从头获取所有数据
+                // 2. 增量模式：已有缓存，获取比缓存第一条更新的数据（包括"同步全部"）
+                // 3. 扩展模式：目标条数 > 缓存条数，在缓存基础上继续获取历史数据
                 isFullMode = currentCacheCount === 0;
                 isExpandMode = !isUnlimited && currentCacheCount > 0 && maxItems > currentCacheCount;
                 isIncrementMode = currentCacheCount > 0 && !isExpandMode;
+
+                // 保存模式到syncState（用于断点续传）
                 syncState.syncMode = isFullMode ? 'full' : (isExpandMode ? 'expand' : 'increment');
             }
+
+            console.log('同步模式判断', {
+                isFullMode,
+                isUnlimited,
+                isExpandMode,
+                isIncrementMode,
+                currentCacheCount,
+                maxItems,
+                isResuming,
+                syncMode: syncState.syncMode
+            });
 
             let stopKey = null;
 
             if (isFullMode) {
+                // 全量模式：缓存为空，从头开始
                 console.log('全量模式：缓存为空，从头开始同步');
             } else if (isExpandMode) {
+                // 扩展模式：从缓存最后一条之后开始获取
                 if (!isResuming) {
+                    // 新开始扩展：先把缓存数据复制到newItems
                     syncState.newItems = [...listCache.list];
+                    // 计算应该从第几页开始
                     syncState.page = Math.floor(currentCacheCount / perPage) + 1;
                 }
+                console.log('扩展模式：从第', syncState.page, '页继续，已有', syncState.newItems.length, '条');
             } else if (isIncrementMode) {
+                // 增量模式：从第1页开始，遇到缓存第1条停止
                 stopKey = listCache.firstItem ? getListCacheKey(listCache.firstItem) : null;
+                console.log('增量模式：stopKey =', stopKey);
             }
 
             let totalScanned = (syncState.page - 1) * perPage;
 
+            // 显示进度提示
             if (isResuming) {
                 updateProgress(syncState.newItems.length, isUnlimited ? 100 : maxItems, `继续同步，已获取 ${syncState.newItems.length} 条...`);
                 if (syncStatus) syncStatus.textContent = `继续同步中...`;
@@ -1862,25 +1801,30 @@
                     const key = getListCacheKey(item);
                     totalScanned++;
 
+                    // 检查是否到达上次同步的位置（仅限增量模式）
                     if (stopKey && key === stopKey) {
+                        console.log('遇到已同步数据，停止增量同步');
                         foundExisting = true;
                         break;
                     }
 
+                    // 检查是否已存在（去重）
                     const isDuplicate = syncState.newItems.some(existing =>
                         getListCacheKey(existing) === key
                     );
                     if (isDuplicate) {
-                        continue;
+                        continue; // 静默跳过重复数据
                     }
 
                     syncState.newItems.push(item);
 
+                    // 检查是否达到限制
                     if (syncState.newItems.length >= maxItems) {
                         break;
                     }
                 }
 
+                // 检查是否还有更多页
                 const totalPages = Math.ceil(total / perPage);
                 if (syncState.page >= totalPages) {
                     hasMore = false;
@@ -1891,8 +1835,12 @@
                 updateProgress(Math.min(syncState.newItems.length, progressMax), progressMax, `正在同步第 ${syncState.page} 页，已获取 ${syncState.newItems.length} 条...`);
             }
 
+            console.log('同步完成', { newItemsCount: syncState.newItems.length, foundExisting, hasMore, syncMode: syncState.syncMode });
+
+            // 同步完成，更新列表缓存
             if (syncState.newItems.length > 0) {
                 if (isIncrementMode && !isExpandMode) {
+                    // 增量模式：将新数据添加到缓存前面
                     const existingKeys = new Set(listCache.list.map(item => getListCacheKey(item)));
                     const uniqueNewItems = syncState.newItems.filter(item =>
                         !existingKeys.has(getListCacheKey(item))
@@ -1900,12 +1848,14 @@
 
                     if (uniqueNewItems.length > 0) {
                         listCache.list = [...uniqueNewItems, ...listCache.list];
+                        // 更新firstItem为最新的
                         const firstItem = uniqueNewItems[0];
                         listCache.firstItem = {
                             orderId: firstItem.orderId,
                             disputeTime: firstItem.disputeTime,
                             reverseOrderLineId: firstItem.reverseOrderLineId
                         };
+                        // lastItem保持不变
                         listCache.syncTime = Date.now();
                         saveListCache();
                         if (syncStatus) syncStatus.textContent = `新增 ${uniqueNewItems.length} 条纠纷`;
@@ -1913,7 +1863,10 @@
                         if (syncStatus) syncStatus.textContent = '已是最新数据';
                     }
                 } else {
+                    // 全量模式或扩展模式：直接使用newItems作为新缓存
                     listCache.list = syncState.newItems;
+
+                    // 更新首尾标记（包含reverseOrderLineId用于精确匹配）
                     const firstItem = syncState.newItems[0];
                     const lastItem = syncState.newItems[syncState.newItems.length - 1];
                     listCache.firstItem = {
@@ -1928,6 +1881,7 @@
                     };
                     listCache.syncTime = Date.now();
                     saveListCache();
+
                     const actionText = isExpandMode ? '扩展至' : '同步';
                     if (syncStatus) syncStatus.textContent = `已${actionText} ${syncState.newItems.length} 条纠纷`;
                 }
@@ -1937,21 +1891,30 @@
                 if (syncStatus) syncStatus.textContent = '暂无纠纷数据';
             }
 
+            // 同步完成，清除中断状态
             clearSyncState();
+
+            // 更新统计
             await fetchDisputeStats();
             updateFilterCounts();
             updateListCacheCount();
+
+            // 根据当前筛选显示数据
             applyCurrentFilter();
 
         } catch (error) {
             console.error('同步失败:', error);
+
             const errMsg = error.message || '';
 
+            // 只要有已同步的数据，就保存断点
             if (syncState.newItems.length > 0) {
                 syncState.interrupted = true;
                 saveSyncState();
+
                 if (syncStatus) syncStatus.textContent = `已获取 ${syncState.newItems.length} 条，待继续`;
 
+                // 检查是否需要验证或登录过期
                 if (errMsg.includes('刷新页面') || errMsg.includes('验证') || errMsg.includes('过期')) {
                     const continueSync = confirm(
                         `同步被中断，已获取 ${syncState.newItems.length} 条数据。\n\n` +
@@ -1959,6 +1922,7 @@
                         `请刷新页面完成验证后，重新打开插件点击"继续同步"。\n\n` +
                         `点击"确定"刷新页面，点击"取消"稍后手动刷新。`
                     );
+
                     if (continueSync) {
                         location.reload();
                         return;
@@ -1975,6 +1939,7 @@
         setTimeout(() => progressContainer.classList.remove('show'), 500);
         refreshBtn.classList.remove('loading');
 
+        // 根据状态显示按钮文字
         if (syncState.interrupted && syncState.newItems.length > 0) {
             refreshBtn.textContent = '🔄 继续同步';
         } else {
@@ -1995,6 +1960,7 @@
         document.getElementById('disputePanelOverlay').classList.add('show');
         document.getElementById('disputePanel').classList.add('show');
 
+        // 检测是否有中断的同步
         const hasInterrupted = loadSyncState();
         if (hasInterrupted) {
             const refreshBtn = document.getElementById('refreshBtn');
@@ -2026,6 +1992,7 @@
         updateProgress(50, 100, '正在获取纠纷列表...');
 
         try {
+            // 根据当前筛选条件获取数据
             let screenItemsStatus = null;
             let sortField = null;
 
@@ -2086,6 +2053,7 @@
         const container = document.getElementById('paginationContainer');
         if (!container) return;
 
+        // 普通分页（全部/纠纷中/等待您处理）不显示筛选条数
         let html = `
             <button class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} data-page="1">⏮</button>
             <button class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">◀</button>
@@ -2128,11 +2096,14 @@
         });
     }
 
+    // 渲染买家备注
     function renderBuyerComment(comment, rowIndex) {
         if (!comment) return '<span style="color:#999">无</span>';
+
         if (comment.length <= 50) {
             return `<div class="buyer-comment">${comment}</div>`;
         }
+
         return `
             <div class="buyer-comment">
                 <div class="buyer-comment-short" id="comment-short-${rowIndex}">${comment}</div>
@@ -2142,11 +2113,14 @@
         `;
     }
 
+    // 渲染证据（图片+视频）
     function renderEvidence(evidenceList, rowIndex) {
         if (!evidenceList || evidenceList.length === 0) {
             return '<span style="color:#999">无</span>';
         }
+
         const mediaJson = JSON.stringify(evidenceList).replace(/"/g, '&quot;');
+
         if (evidenceList.length === 1) {
             const e = evidenceList[0];
             if (e.type === 'video') {
@@ -2155,6 +2129,8 @@
                 return `<img src="${e.url}" class="evidence-single" data-media='${mediaJson}' data-index="0">`;
             }
         }
+
+        // 多个文件
         let stackHtml = '';
         evidenceList.slice(0, 3).forEach((e, i) => {
             if (e.type === 'video') {
@@ -2163,6 +2139,7 @@
                 stackHtml += `<img src="${e.url}" class="evidence-stack-item">`;
             }
         });
+
         return `
             <div class="evidence-container" data-media='${mediaJson}'>
                 <div class="evidence-stack">
@@ -2173,17 +2150,23 @@
         `;
     }
 
+    // 渲染纠纷历史（完整版）
     function renderHistory(historyList, rowIndex) {
         if (!historyList || historyList.length === 0) {
             return '<span style="color:#999">无</span>';
         }
+
         const renderHistoryItem = (h, isFirst) => {
             let html = `<div class="history-item-full ${isFirst ? '' : 'collapsed'}">`;
             html += `<div class="history-time">${h.time}</div>`;
             html += `<div class="history-action-type">${h.actionType}</div>`;
+
+            // 纠纷理由
             if (h.applyReason) {
                 html += `<div class="history-detail"><span class="history-detail-label">理由：</span>${h.applyReason}</div>`;
             }
+
+            // 方案详情
             if (h.solutions && h.solutions.length > 0) {
                 h.solutions.forEach(s => {
                     html += `<div class="history-detail">`;
@@ -2195,6 +2178,8 @@
                     html += `</div>`;
                 });
             }
+
+            // 附件
             if (h.files && h.files.length > 0) {
                 const filesJson = JSON.stringify(h.files).replace(/"/g, '&quot;');
                 html += `<div class="history-files" data-media='${filesJson}'>`;
@@ -2207,12 +2192,17 @@
                 });
                 html += `</div>`;
             }
+
             html += `</div>`;
             return html;
         };
 
         let html = '<div class="history-container">';
+
+        // 第一条（最新）
         html += renderHistoryItem(historyList[0], true);
+
+        // 更多历史
         if (historyList.length > 1) {
             html += `<span class="history-toggle" id="history-toggle-${rowIndex}" data-history="${rowIndex}">▼ 更多 (${historyList.length - 1})</span>`;
             html += `<div class="history-more" id="history-more-${rowIndex}">`;
@@ -2221,6 +2211,7 @@
             });
             html += `</div>`;
         }
+
         html += '</div>';
         return html;
     }
@@ -2240,6 +2231,7 @@
             return;
         }
 
+        // 对于已处理/未处理模式，需要手动分页
         let displayData = dataToRender;
         const isFilteredMode = currentFilter === 'processed' || currentFilter === 'unprocessed';
         if (isFilteredMode) {
@@ -2248,11 +2240,15 @@
             displayData = dataToRender.slice(startIdx, endIdx);
         }
 
+        // 计算当前页的起始索引（用于判断是否超过前50条）
         const pageStartIdx = isFilteredMode ? (currentPage - 1) * pageSize : 0;
+
+        // 检查是否全选（只检查当前页）
         const allSelected = displayData.length > 0 && displayData.every(item =>
             selectedItems.has(getProcessedKey(item.reverseOrderLineId))
         );
 
+        // 动态构建表头 - 添加全选和处理情况列
         let headerHtml = `<tr>
             <th style="width:40px;text-align:center">
                 <input type="checkbox" class="batch-checkbox" id="selectAllCheckbox" ${allSelected ? 'checked' : ''}>
@@ -2265,16 +2261,16 @@
         if (displaySettings.evidence) headerHtml += '<th>证据</th>';
         if (displaySettings.history) headerHtml += '<th>纠纷历史</th>';
         if (displaySettings.logistics) headerHtml += '<th>物流</th>';
-        headerHtml += '<th>操作</th><th>最后更新</th></tr>';
+        headerHtml += '<th>操作</th></tr>';
 
         let html = `<table class="dispute-table"><thead>${headerHtml}</thead><tbody>`;
 
         displayData.forEach((item, index) => {
-            const globalIdx = pageStartIdx + index;
-            const isLimitedRow = isFilteredMode && globalIdx >= 50;
+            const globalIdx = pageStartIdx + index; // 全局索引
+            const isLimitedRow = isFilteredMode && globalIdx >= 50; // 已处理/未处理模式下超过50条
 
             const statusClass = getStatusClass(item.disputeStatus);
-            const isLoaded = item.detailLoaded && !isLimitedRow;
+            const isLoaded = item.detailLoaded && !isLimitedRow; // 超过50条的不显示详情
             const timeInfo = formatCacheTime(item.cacheTimestamp);
             const notLoaded = `<span class="not-loaded">-</span>`;
             const limitedInfo = `<span class="not-loaded" title="仅显示前50条的详细信息">-</span>`;
@@ -2285,10 +2281,12 @@
 
             html += `<tr class="${rowClass}">`;
 
+            // 批量选择复选框
             html += `<td style="text-align:center">
                 <input type="checkbox" class="batch-checkbox" data-select-id="${item.reverseOrderLineId}" ${isSelected ? 'checked' : ''}>
             </td>`;
 
+            // 处理情况下拉
             const selectClass = processed ? 'processed' : 'unprocessed';
             html += `<td style="text-align:center">
                 <select class="process-select ${selectClass}" data-process-id="${item.reverseOrderLineId}">
@@ -2297,6 +2295,7 @@
                 </select>
             </td>`;
 
+            // 产品图片：超过50条时显示占位图
             if (isLimitedRow) {
                 html += `<td><div class="thumb-placeholder" title="仅显示前50条的图片">-</div></td>`;
             } else {
@@ -2307,10 +2306,12 @@
             html += `<td style="font-size:12px">${item.disputeTime}</td>`;
             html += `<td><span class="status-tag ${statusClass}">${item.disputeStatus || '-'}</span></td>`;
 
+            // 纠纷理由
             if (displaySettings.disputeReason) {
                 html += `<td style="font-size:12px">${isLoaded ? (item.disputeReason || '-') : (isLimitedRow ? limitedInfo : notLoaded)}</td>`;
             }
 
+            // 协商方案
             if (displaySettings.solution) {
                 let solutionHtml = isLimitedRow ? limitedInfo : notLoaded;
                 if (isLoaded && item.solution) {
@@ -2321,18 +2322,22 @@
                 html += `<td>${solutionHtml}</td>`;
             }
 
+            // 买家备注
             if (displaySettings.buyerComment) {
                 html += `<td>${isLoaded ? renderBuyerComment(item.buyerComment, index) : (isLimitedRow ? limitedInfo : notLoaded)}</td>`;
             }
 
+            // 证据
             if (displaySettings.evidence) {
                 html += `<td>${isLoaded ? renderEvidence(item.evidenceList, index) : (isLimitedRow ? limitedInfo : notLoaded)}</td>`;
             }
 
+            // 纠纷历史
             if (displaySettings.history) {
                 html += `<td>${isLoaded ? renderHistory(item.historyList, index) : (isLimitedRow ? limitedInfo : notLoaded)}</td>`;
             }
 
+            // 物流
             if (displaySettings.logistics) {
                 let logisticsHtml = notLoaded;
                 if (isLoaded) {
@@ -2354,21 +2359,11 @@
                 html += `<td>${logisticsHtml}</td>`;
             }
 
-            // 操作列 - 添加聊天按钮
-            let actionHtml = '';
-            if (item.contactBuyerUrl) {
-                actionHtml += `<button class="chat-btn" data-chat-url="${item.contactBuyerUrl}" data-chat-buyer="${item.buyerName}" data-chat-country="${item.buyerCountry}" data-chat-order="${item.orderId}"><svg class="chat-icon" viewBox="64 64 896 896" xmlns="http://www.w3.org/2000/svg"><path d="M840.704 444.928a246.848 246.848 0 0 1 117.12 209.408c0 38.336-10.176 77.824-28.928 114.688l-0.64 1.088-0.448 1.024 12.8 43.072 0.256 0.64a48.96 48.96 0 0 1-61.504 60.672l-0.64-0.192-39.488-11.712-0.256 0.128-0.64 0.384-0.768 0.384-0.832 0.512-1.216 0.704-1.792 1.088a244.992 244.992 0 0 1-243.904-0.576c27.648-12.16 54.016-27.264 78.656-44.992a173.632 173.632 0 0 0 128-16l0.64-0.384 1.856-1.152 1.408-0.832 0.64-0.384 1.28-0.768 1.28-0.704 0.64-0.384 0.64-0.32 1.28-0.64c4.288-2.304 8.128-3.968 12.544-5.44l0.896-0.32 0.64-0.128a61.056 61.056 0 0 1 35.584-0.384l0.64 0.192 0.832 0.256 2.368 0.64-1.728-5.76-0.192-0.64a57.6 57.6 0 0 1 4.224-46.528l0.32-0.576 0.256-0.448c14.848-27.648 22.976-56.896 23.296-84.288v-1.92c0-44.16-17.152-86.912-47.424-119.168a451.2 451.2 0 0 0 2.304-90.24z m-423.04-318.912c96.704 0 185.856 38.528 251.456 105.6a353.216 353.216 0 0 1 100.864 246.4c0 103.04-40.448 193.344-111.168 258.368a360.576 360.576 0 0 1-241.856 94.592c-60.032 0-123.648-16.384-174.144-46.144l-0.192-0.128-1.536-0.896-1.984-1.28-0.768-0.384-1.088-0.64-1.344-0.768-1.28-0.64-0.896-0.512-1.088-0.64-0.512-0.192-0.64-0.384-0.768-0.32-0.448-0.192-0.64-0.32-0.32-0.128-0.384-0.192-0.384-0.128-0.512-0.192-0.384-0.128-0.32-0.064-0.384-0.128c-0.768-0.256-1.024-0.256-1.664-0.064l-0.768 0.256-0.448 0.128-64 19.008-0.832 0.256a55.68 55.68 0 0 1-70.528-67.712l0.384-1.344a36.032 36.032 0 0 1 0.192-0.768l21.248-71.04a36.032 36.032 0 0 1 0.576-1.664l-0.128 0.384-0.768-1.344C80.64 597.568 64.32 538.112 64 480.64v-1.728A355.2 355.2 0 0 1 163.84 232.96a349.44 349.44 0 0 1 253.824-106.944z m0 72c-78.72 0-149.76 30.848-202.048 84.928a283.264 283.264 0 0 0-79.616 196.032c0 46.08 13.44 95.04 38.4 140.992l-0.384-0.704 0.32 0.576c9.856 16.896 11.392 37.184 5.248 56l-0.192 0.64-0.064 0.256-12.672 42.112 36.48-10.88h0.256c14.976-4.8 29.76-4.672 44.352-0.32l0.768 0.192 1.152 0.384c2.24 0.704 4.48 1.536 6.592 2.368l1.088 0.448 1.088 0.448c1.664 0.704 3.264 1.472 4.928 2.304l1.152 0.576 1.088 0.64 1.152 0.576 0.64 0.256 1.152 0.64 1.216 0.64 1.28 0.768 1.216 0.64 1.28 0.768 1.28 0.768 1.408 0.832 2.048 1.28 1.28 0.64 0.96 0.64c38.592 22.4 88.384 35.264 135.04 35.52h1.408a288.576 288.576 0 0 0 193.152-75.648c56-51.456 87.872-122.624 87.872-205.312A281.216 281.216 0 0 0 617.6 281.92a277.12 277.12 0 0 0-199.936-83.904z m-167.296 240a40.448 40.448 0 1 1-0.064 80.896 40.448 40.448 0 0 1 0.064-80.896z m166.656 0a40.448 40.448 0 1 1-0.128 80.896 40.448 40.448 0 0 1 0.128-80.896z m166.592 0a40.448 40.448 0 1 1-0.128 80.896 40.448 40.448 0 0 1 0.128-80.896z"></path></svg>联系买家</button>`;
-            }
-            if (!isLoaded) {
-                actionHtml += ` <button class="lazy-load-btn" id="load-btn-${item.reverseOrderLineId}" data-load="${item.reverseOrderLineId}">加载</button>`;
-            }
-            html += `<td>${actionHtml}</td>`;
-
-            // 最后更新时间列
-            const updateTimeHtml = isLoaded
+            // 操作列
+            let actionHtml = isLoaded
                 ? `<span class="data-time ${timeInfo.level}">${timeInfo.text}</span>`
-                : `<span class="not-loaded">-</span>`;
-            html += `<td>${updateTimeHtml}</td>`;
+                : `<button class="lazy-load-btn" id="load-btn-${item.reverseOrderLineId}" data-load="${item.reverseOrderLineId}">加载</button>`;
+            html += `<td>${actionHtml}</td>`;
 
             html += `</tr>`;
         });
@@ -2382,6 +2377,7 @@
     function handleTableChange(e) {
         const target = e.target;
 
+        // 全选复选框
         if (target.id === 'selectAllCheckbox') {
             if (target.checked) {
                 selectAllVisible();
@@ -2391,11 +2387,13 @@
             return;
         }
 
+        // 单个选择复选框
         if (target.dataset.selectId) {
             toggleSelectItem(target.dataset.selectId);
             return;
         }
 
+        // 处理情况下拉选择
         if (target.dataset.processId) {
             const reverseOrderLineId = target.dataset.processId;
             const newValue = target.value;
@@ -2407,10 +2405,12 @@
                 markAsUnprocessed(reverseOrderLineId);
             }
 
+            // 更新UI
             target.classList.remove('processed', 'unprocessed');
             target.classList.add(newValue);
             target.closest('tr')?.classList.toggle('row-processed', nowProcessed);
 
+            // 如果当前是筛选模式，标记后可能需要从列表中移除
             if (currentFilter === 'unprocessed' && nowProcessed) {
                 const idx = filteredList.findIndex(item =>
                     item.reverseOrderLineId === reverseOrderLineId
@@ -2435,22 +2435,13 @@
     function handleTableClick(e) {
         const target = e.target;
 
-        // 联系买家按钮
-        if (target.dataset.chatUrl) {
-            openChatModal(
-                target.dataset.chatUrl,
-                target.dataset.chatBuyer || '-',
-                target.dataset.chatCountry || '-',
-                target.dataset.chatOrder || '-'
-            );
-            return;
-        }
-
+        // 产品图预览
         if (target.dataset.preview) {
             previewMedia([{ type: 'image', url: target.dataset.preview }], 0);
             return;
         }
 
+        // 证据/历史附件预览
         const mediaContainer = target.closest('[data-media]');
         if (mediaContainer) {
             const mediaList = JSON.parse(mediaContainer.dataset.media);
@@ -2459,9 +2450,16 @@
             return;
         }
 
+        // 物流展开
         if (target.dataset.toggle) { toggleLogistics(target.dataset.toggle); return; }
+
+        // 历史展开
         if (target.dataset.history) { toggleHistory(target.dataset.history); return; }
+
+        // 买家备注展开
         if (target.dataset.comment) { toggleComment(target.dataset.comment); return; }
+
+        // 单条加载
         if (target.dataset.load) { loadSingleDetail(target.dataset.load); return; }
     }
 
@@ -2483,6 +2481,7 @@
     }
 
     function updateFilterCounts() {
+        // 从缓存列表中统计已处理和未处理数量
         let processedCount = 0;
         let unprocessedCount = 0;
 
@@ -2498,6 +2497,8 @@
         const unprocessedEl = document.getElementById('statUnprocessed');
         if (processedEl) processedEl.textContent = processedCount;
         if (unprocessedEl) unprocessedEl.textContent = unprocessedCount;
+
+        // 更新已标记总数
         updateProcessedCountBadge();
     }
 
@@ -2505,6 +2506,7 @@
         if (currentFilter === 'processed' || currentFilter === 'unprocessed') {
             await scanFilteredDisputes();
         } else {
+            // 使用API筛选
             await loadListOnly();
         }
     }
@@ -2520,23 +2522,29 @@
         filteredList = [];
 
         const isFilterProcessed = currentFilter === 'processed';
+
         const progressContainer = document.getElementById('progressContainer');
         const syncStatus = document.getElementById('syncStatus');
         progressContainer.classList.add('show');
 
         try {
+            // 从缓存中筛选所有符合条件的数据
             if (listCache.list.length > 0) {
                 if (syncStatus) syncStatus.textContent = '从缓存筛选中...';
 
                 for (const item of listCache.list) {
                     const itemProcessed = isProcessed(item.reverseOrderLineId);
+
                     if ((isFilterProcessed && itemProcessed) || (!isFilterProcessed && !itemProcessed)) {
+                        // 应用详情缓存
                         const fullItem = applyCacheToItem({ ...item });
                         filteredList.push(fullItem);
                     }
                 }
+
                 if (syncStatus) syncStatus.textContent = `找到 ${filteredList.length} 条`;
             } else {
+                // 缓存为空，需要从API获取
                 if (syncStatus) syncStatus.textContent = '请先点击同步按钮';
             }
 
@@ -2562,6 +2570,7 @@
             const totalPages = Math.ceil(totalFiltered / pageSize);
             const displayPage = Math.min(currentPage, totalPages) || 1;
 
+            // 分页按钮（和普通分页一致，没有筛选条数选择器）
             let html = `
                 <button class="pagination-btn" ${displayPage === 1 ? 'disabled' : ''} data-page="1">⏮</button>
                 <button class="pagination-btn" ${displayPage === 1 ? 'disabled' : ''} data-page="${displayPage - 1}">◀</button>
@@ -2600,10 +2609,11 @@
 
             container.innerHTML = html;
 
+            // 绑定分页事件
             container.querySelectorAll('.pagination-btn[data-page]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     currentPage = parseInt(btn.dataset.page);
-                    selectedItems.clear();
+                    selectedItems.clear(); // 切换页面时清除选择
                     updateBatchActionsBar();
                     renderTable();
                     updatePaginationForFiltered();
@@ -2612,7 +2622,7 @@
             container.querySelector('#pageSizeSelect')?.addEventListener('change', (e) => {
                 pageSize = parseInt(e.target.value);
                 currentPage = 1;
-                selectedItems.clear();
+                selectedItems.clear(); // 切换每页条数时清除选择
                 updateBatchActionsBar();
                 renderTable();
                 updatePaginationForFiltered();
@@ -2654,7 +2664,7 @@
         panel.innerHTML = `
             <div class="panel-header">
                 <div class="panel-header-left">
-                    <div class="panel-title">📊 纠纷统计与管理面板 V4.9</div>
+                    <div class="panel-title">📊 纠纷统计与管理面板 V4.8</div>
                     <div class="today-badge">
                         <span>📅 今日新增:</span>
                         <span class="today-count" id="todayDisputeCount">0</span>
@@ -2696,7 +2706,9 @@
                     <div class="filter-number" id="statWaitingHandle">-</div>
                     <div class="filter-label">等待您处理</div>
                 </div>
+
                 <span class="filter-divider"></span>
+
                 <div class="filter-card processed-filter" data-filter="processed">
                     <div class="filter-number" id="statProcessed">-</div>
                     <div class="filter-label">已处理</div>
@@ -2705,6 +2717,7 @@
                     <div class="filter-number" id="statUnprocessed">-</div>
                     <div class="filter-label">未处理</div>
                 </div>
+
                 <div class="display-settings">
                     <span class="display-settings-title">显示列：</span>
                     <label class="display-checkbox"><input type="checkbox" id="display-disputeReason" ${displaySettings.disputeReason ? 'checked' : ''}>纠纷理由</label>
@@ -2724,6 +2737,7 @@
         `;
         document.body.appendChild(panel);
 
+        // 创建同步弹窗
         const syncModal = document.createElement('div');
         syncModal.className = 'sync-modal';
         syncModal.id = 'syncModal';
@@ -2768,17 +2782,24 @@
                 saveListCache();
                 processedCache = {};
                 saveProcessedCache();
+
+                // 清除同步中断状态
                 clearSyncState();
                 syncState = { page: 1, newItems: [], interrupted: false, targetLimit: 500, syncMode: null };
+
+                // 恢复同步按钮到初始状态
                 const refreshBtn = document.getElementById('refreshBtn');
                 if (refreshBtn) {
                     refreshBtn.textContent = '🔄 同步最新纠纷列表';
                     refreshBtn.classList.remove('loading');
                 }
+
+                // 恢复状态栏
                 const syncStatus = document.getElementById('syncStatus');
                 if (syncStatus) {
                     syncStatus.textContent = '未同步';
                 }
+
                 updateCacheInfo();
                 updateListCacheCount();
                 updateProcessedCountBadge();
@@ -2789,6 +2810,7 @@
             }
         });
 
+        // 同步弹窗事件
         document.getElementById('syncModalClose').addEventListener('click', hideSyncModal);
         document.getElementById('syncModalCancel').addEventListener('click', hideSyncModal);
         document.getElementById('syncModalConfirm').addEventListener('click', confirmSync);
@@ -2796,18 +2818,22 @@
             if (e.target.id === 'syncModal') hideSyncModal();
         });
 
+        // 筛选卡片点击
         document.querySelectorAll('.filter-card').forEach(card => {
             card.addEventListener('click', () => filterByType(card.dataset.filter));
         });
 
+        // 显示设置复选框
         ['disputeReason', 'solution', 'buyerComment', 'evidence', 'history', 'logistics'].forEach(key => {
             document.getElementById('display-' + key)?.addEventListener('change', () => handleDisplaySettingChange(key));
         });
 
+        // 批量操作按钮
         document.getElementById('batchMarkProcessed')?.addEventListener('click', batchMarkAsProcessed);
         document.getElementById('batchMarkUnprocessed')?.addEventListener('click', batchMarkAsUnprocessed);
         document.getElementById('batchCancel')?.addEventListener('click', deselectAll);
 
+        // 媒体预览模态框
         const mediaModal = document.createElement('div');
         mediaModal.className = 'media-preview-modal';
         mediaModal.id = 'mediaPreviewModal';
@@ -2827,29 +2853,11 @@
         document.getElementById('mediaPreviewNext').addEventListener('click', nextPreviewMedia);
         mediaModal.addEventListener('click', (e) => { if (e.target === mediaModal) closeMediaPreview(); });
 
-        // 创建聊天弹窗
-        createChatModal();
-
-        // ESC 键统一处理
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (document.getElementById('chatModal')?.classList.contains('show')) {
-                    closeChatModal();
-                    return;
-                }
-                if (document.getElementById('mediaPreviewModal')?.classList.contains('show')) {
-                    closeMediaPreview();
-                    return;
-                }
-                if (document.getElementById('syncModal')?.classList.contains('show')) {
-                    hideSyncModal();
-                    return;
-                }
-            }
-            if (document.getElementById('mediaPreviewModal')?.classList.contains('show')) {
-                if (e.key === 'ArrowLeft') prevPreviewMedia();
-                if (e.key === 'ArrowRight') nextPreviewMedia();
-            }
+            if (!document.getElementById('mediaPreviewModal')?.classList.contains('show')) return;
+            if (e.key === 'ArrowLeft') prevPreviewMedia();
+            if (e.key === 'ArrowRight') nextPreviewMedia();
+            if (e.key === 'Escape') closeMediaPreview();
         });
     }
 
@@ -2870,131 +2878,11 @@
         loadProcessedCache();
         loadListCache();
         createUI();
-
-// 插入样式
-if (!document.getElementById('cainiaoTrackingStyle')) {
-    const style = document.createElement('style');
-    style.id = 'cainiaoTrackingStyle';
-    style.textContent = `
-.cainiao-tracking-container {
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 12px;
-    background: #fafbfc;
-    font-size: 14px;
-    margin: 8px 0;
-    max-width: 420px;
-}
-.cainiao-tracking-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-}
-.cainiao-tracking-latest {
-    font-weight: bold;
-    color: #1a73e8;
-}
-.cainiao-tracking-toggle {
-    background: none;
-    border: none;
-    color: #1a73e8;
-    cursor: pointer;
-    font-size: 13px;
-    padding: 0 6px;
-}
-.cainiao-tracking-list {
-    margin-top: 10px;
-    display: none;
-    flex-direction: column;
-    gap: 6px;
-}
-.cainiao-tracking-list.show {
-    display: flex;
-}
-.cainiao-tracking-item {
-    padding: 6px 8px;
-    border-radius: 4px;
-    transition: background 0.2s;
-}
-.cainiao-tracking-item:hover {
-    background: #f0f4f8;
-}
-.cainiao-tracking-time {
-    color: #888;
-    font-size: 12px;
-    margin-right: 8px;
-}
-.cainiao-tracking-desc {
-    color: #222;
-}
-    `;
-    document.head.appendChild(style);
-}
-
-// 插入容器
-if (!document.getElementById('cainiaoTrackingRoot')) {
-    const div = document.createElement('div');
-    div.id = 'cainiaoTrackingRoot';
-    document.body.appendChild(div); // 或插入到你想要的位置
-}
-
-// 示例轨迹数据，实际请替换为你的数据
-const detailList = [
-    { "timeStr": "2025-12-18 11:26:10", "standerdDesc": "集货仓出库成功" },
-    { "timeStr": "2025-12-17 10:01:38", "standerdDesc": "仓库入库成功" }
-];
-renderCainiaoTracking(detailList, 'cainiaoTrackingRoot');
-
-// 渲染轨迹函数
-function renderCainiaoTracking(detailList, containerId) {
-    if (!detailList || !detailList.length) return;
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    const latest = detailList[0];
-    let html = `
-    <div class="cainiao-tracking-container">
-        <div class="cainiao-tracking-header">
-            <span class="cainiao-tracking-latest">
-                <span class="cainiao-tracking-time">${latest.timeStr}</span>
-                <span class="cainiao-tracking-desc">${latest.standerdDesc}</span>
-            </span>
-            <button class="cainiao-tracking-toggle" type="button">展开</button>
-        </div>
-        <div class="cainiao-tracking-list">
-            ${detailList.map(item => `
-                <div class="cainiao-tracking-item">
-                    <span class="cainiao-tracking-time">${item.timeStr}</span>
-                    <span class="cainiao-tracking-desc">${item.standerdDesc}</span>
-                </div>
-            `).join('')}
-        </div>
-    </div>
-    `;
-    container.innerHTML = html;
-
-    const toggleBtn = container.querySelector('.cainiao-tracking-toggle');
-    const trackingList = container.querySelector('.cainiao-tracking-list');
-    let expanded = false;
-    toggleBtn.onclick = function() {
-        expanded = !expanded;
-        if (expanded) {
-            trackingList.classList.add('show');
-            toggleBtn.textContent = '收起';
-        } else {
-            trackingList.classList.remove('show');
-            toggleBtn.textContent = '展开';
-        }
-    };
-}
         updateCacheInfo();
         updateProcessedCountBadge();
         updateListCacheCount();
         updateFilterCounts();
-        console.log('V4.9 已加载');
-
-    
+        console.log('V4.8 已加载');
     }
 
     if (document.readyState === 'loading') {
